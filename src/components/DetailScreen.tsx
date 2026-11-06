@@ -1,13 +1,14 @@
+import React, { useEffect } from 'react';
 import {
-  ChevronLeft,
+  X,
   Bookmark,
   Share2,
   Star,
   Calendar,
   Layers,
   BookOpen,
-  Heart,
-  Sparkles
+  ExternalLink,
+  CheckCircle2,
 } from 'lucide-react';
 import { Book } from '../types';
 import { formatCompactNumber } from '../utils/format';
@@ -17,7 +18,7 @@ interface DetailScreenProps {
   relatedBooks: Book[];
   isFavorite: boolean;
   onToggleFavorite: (book: Book) => void;
-  onBack: () => void;
+  onClose: () => void;
   onSelectRelatedBook: (book: Book) => void;
 }
 
@@ -26,62 +27,62 @@ export const DetailScreen: React.FC<DetailScreenProps> = ({
   relatedBooks,
   isFavorite,
   onToggleFavorite,
-  onBack,
+  onClose,
   onSelectRelatedBook,
 }) => {
-  const otherBooks = relatedBooks.filter((b) => b.key !== book.key).slice(0, 5);
+  const otherBooks = relatedBooks
+    .filter((b) => b.key !== book.key)
+    .slice(0, 6);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: book.title,
+          text: `Lihat buku "${book.title}" di Open Library`,
+          url: `https://openlibrary.org${book.key}`,
+        })
+        .catch(() => {});
+    } else {
+      navigator.clipboard.writeText(`https://openlibrary.org${book.key}`);
+      alert('Tautan buku berhasil disalin ke clipboard!');
+    }
+  };
 
   return (
-    <div className="flex-1 w-full h-full min-h-[850px] bg-white flex flex-col font-['Plus_Jakarta_Sans',sans-serif] text-slate-900 select-none animate-in fade-in slide-in-from-right duration-200">
-      {/* Top iOS Navigation Bar */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-6 py-3.5 border-b border-slate-100 flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-[13.5px] font-bold transition"
-        >
-          <ChevronLeft className="w-4.5 h-4.5" />
-          <span>Kembali</span>
-        </button>
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col md:flex-row my-auto max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Left Column: Cover & Quick Actions */}
+        <div className="md:w-5/12 bg-gradient-to-b from-[#CBD0F8]/50 via-[#E8EBFD]/30 to-slate-50 p-6 sm:p-8 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-slate-100">
+          <div className="w-full flex justify-between items-center md:hidden mb-4">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Detail Buku
+            </span>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
 
-        <span className="text-[14px] font-black tracking-tight text-slate-800">
-          Detail Buku
-        </span>
-
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => onToggleFavorite(book)}
-            className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
-              isFavorite
-                ? 'bg-amber-100 text-amber-700 shadow-xs'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-            title={isFavorite ? 'Hapus dari Favorit' : 'Simpan ke Favorit'}
-          >
-            <Bookmark className={`w-4.5 h-4.5 ${isFavorite ? 'fill-amber-600 text-amber-600' : ''}`} />
-          </button>
-          <button
-            onClick={() => {
-              if (navigator.share) {
-                navigator.share({
-                  title: book.title,
-                  url: `https://openlibrary.org${book.key}`,
-                }).catch(() => {});
-              }
-            }}
-            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition"
-            title="Bagikan"
-          >
-            <Share2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Scrollable Detail Body */}
-      <div className="flex-1 overflow-y-auto pb-24">
-        {/* Book Cover Showcase with Warm Tint Backdrop */}
-        <div className="relative pt-6 pb-8 px-6 bg-gradient-to-b from-[#CBD0F8]/50 via-[#E8EBFD]/30 to-white flex flex-col items-center">
-          {/* Large Hero Book Cover */}
-          <div className="relative w-44 h-64 rounded-2xl overflow-hidden shadow-[0_16px_36px_rgba(30,33,56,0.22)] border-2 border-white/80 bg-slate-800 transform hover:scale-102 transition duration-300">
+          {/* Book Cover */}
+          <div className="relative w-44 sm:w-52 aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_16px_36px_rgba(30,33,56,0.22)] border-2 border-white bg-slate-900 group">
             {book.coverUrl ? (
               <img
                 src={book.coverUrl}
@@ -89,136 +90,175 @@ export const DetailScreen: React.FC<DetailScreenProps> = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-800 text-white p-4 text-center">
+              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white p-4 text-center">
                 <BookOpen className="w-12 h-12 text-slate-400 mb-2" />
-                <span className="text-[12px] font-bold">{book.title}</span>
+                <span className="text-xs font-bold">{book.title}</span>
               </div>
             )}
           </div>
 
-          {/* Title & Author */}
-          <div className="mt-5 text-center px-4 max-w-sm">
-            <h1 className="text-[23px] font-black text-slate-900 leading-tight tracking-tight">
+          {/* Quick Buttons below cover */}
+          <div className="w-full mt-6 space-y-2.5">
+            <button
+              onClick={() => onToggleFavorite(book)}
+              className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs transition flex items-center justify-center space-x-2 ${
+                isFavorite
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white'
+              }`}
+            >
+              <Bookmark
+                className={`w-4 h-4 ${isFavorite ? 'fill-white' : ''}`}
+              />
+              <span>
+                {isFavorite ? 'Tersimpan di Favorit' : 'Simpan ke Favorit'}
+              </span>
+            </button>
+
+            <div className="flex items-center space-x-2">
+              <a
+                href={`https://openlibrary.org${book.key}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 transition flex items-center justify-center space-x-1.5"
+              >
+                <span>Open Library</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              <button
+                onClick={handleShare}
+                className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition"
+                title="Bagikan Tautan"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Book Details, Meta, Related */}
+        <div className="md:w-7/12 p-6 sm:p-8 overflow-y-auto flex flex-col justify-between">
+          <div>
+            {/* Desktop Close Button */}
+            <div className="hidden md:flex justify-end mb-2">
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition"
+                title="Tutup (Esc)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Rating Tag */}
+            {book.ratingsAverage !== undefined && (
+              <div className="inline-flex items-center space-x-1.5 bg-amber-50 border border-amber-200/80 px-3 py-1 rounded-full text-xs font-extrabold text-amber-900 mb-3">
+                <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                <span>{book.ratingsAverage} / 5.0</span>
+                <span className="text-amber-700 font-semibold">• Open Library Rating</span>
+              </div>
+            )}
+
+            {/* Title & Author */}
+            <h1 className="text-xl sm:text-2xl font-black text-[#1E2138] leading-tight">
               {book.title}
             </h1>
-            <p className="text-[14.5px] font-semibold text-slate-600 mt-2">
+            <p className="text-sm font-semibold text-slate-600 mt-1.5">
               {book.authorNames.length > 0
                 ? book.authorNames.join(', ')
                 : 'Penulis Tidak Diketahui'}
             </p>
 
-            {/* Rating Banner */}
-            <div className="mt-3 inline-flex items-center space-x-2 bg-amber-50 border border-amber-200/80 px-3.5 py-1.5 rounded-full shadow-xs">
-              <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-              <span className="text-[13px] font-black text-amber-900">
-                {book.ratingsAverage !== undefined ? `${book.ratingsAverage} / 5.0` : 'Katalog Terverifikasi'}
-              </span>
-              <span className="text-[11px] font-semibold text-amber-700/80">
-                • Open Library
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 2 Quick Info Matrix Cards: Tahun Terbit & Total Edisi */}
-        <div className="px-6 grid grid-cols-2 gap-3 mt-1">
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <Calendar className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Tahun Terbit
-              </div>
-              <div className="text-[15px] font-extrabold text-slate-900 mt-0.5">
-                {book.firstPublishYear ?? '-'}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
-              <Layers className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Total Edisi
-              </div>
-              <div className="text-[15px] font-extrabold text-slate-900 mt-0.5">
-                {formatCompactNumber(book.editionCount ?? 1)} edisi
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Favorite Action Button (Clean, without "Buka di Open Library") */}
-        <div className="px-6 mt-6">
-          <button
-            onClick={() => onToggleFavorite(book)}
-            className={`w-full py-4 px-5 rounded-2xl text-[14.5px] font-extrabold shadow-sm transition flex items-center justify-center space-x-2.5 ${
-              isFavorite
-                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-white'
-            }`}
-          >
-            <Bookmark className={`w-5 h-5 ${isFavorite ? 'fill-white' : ''}`} />
-            <span>{isFavorite ? 'Tersimpan di Favorit Anda' : 'Simpan ke Koleksi Favorit'}</span>
-          </button>
-        </div>
-
-        {/* Overview & Metadata Description */}
-        <div className="px-6 mt-7">
-          <h3 className="text-[17px] font-black text-slate-900">
-            Tentang Karya Ini
-          </h3>
-          <p className="text-[13.5px] text-slate-600 leading-relaxed mt-2 font-normal">
-            Buku <strong>"{book.title}"</strong> merupakan bagian dari arsip digital di Internet Archive Open Library.
-            Pertama kali dicatat publikasi pada tahun <strong>{book.firstPublishYear ?? 'klasik'}</strong> dengan total <strong>{book.editionCount ?? 1} edisi</strong> yang telah terdokumentasikan secara global.
-          </p>
-        </div>
-
-        {/* Related Books Shelf */}
-        {otherBooks.length > 0 && (
-          <div className="mt-8">
-            <div className="px-6 flex items-center justify-between">
-              <h3 className="text-[17px] font-black text-slate-900">
-                Buku Terkait Lainnya
-              </h3>
-              <span className="text-[12px] font-bold text-slate-400">
-                {otherBooks.length} Buku
-              </span>
-            </div>
-            <div className="mt-3.5 px-6 flex space-x-3 overflow-x-auto scrollbar-none pb-2">
-              {otherBooks.map((rel) => (
-                <div
-                  key={`rel_${rel.key}`}
-                  onClick={() => onSelectRelatedBook(rel)}
-                  className="w-24 shrink-0 cursor-pointer group"
-                >
-                  <div className="h-34 rounded-xl overflow-hidden bg-slate-100 shadow-md group-hover:scale-104 transition duration-200">
-                    {rel.coverUrl ? (
-                      <img
-                        src={rel.coverUrl}
-                        alt={rel.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 text-[10px] font-bold p-1 text-center">
-                        {rel.title}
-                      </div>
-                    )}
-                  </div>
-                  <h4 className="text-[11.5px] font-bold text-slate-800 line-clamp-1 mt-1.5">
-                    {rel.title}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 line-clamp-1">
-                    {rel.authorNames[0] ?? ''}
-                  </p>
+            {/* Metadata Matrix */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center space-x-1.5 text-slate-400 text-[11px] font-bold uppercase">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Tahun Terbit</span>
                 </div>
-              ))}
+                <div className="text-sm font-extrabold text-slate-900 mt-1">
+                  {book.firstPublishYear ?? 'Klasik'}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center space-x-1.5 text-slate-400 text-[11px] font-bold uppercase">
+                  <Layers className="w-3.5 h-3.5 text-violet-500" />
+                  <span>Total Edisi</span>
+                </div>
+                <div className="text-sm font-extrabold text-slate-900 mt-1">
+                  {formatCompactNumber(book.editionCount ?? 1)} edisi
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 col-span-2 sm:col-span-1">
+                <div className="flex items-center space-x-1.5 text-slate-400 text-[11px] font-bold uppercase">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Full Text</span>
+                </div>
+                <div className="text-sm font-extrabold text-slate-900 mt-1">
+                  {book.hasFullText ? 'Tersedia' : 'Hanya Metadata'}
+                </div>
+              </div>
             </div>
+
+            {/* Synopsis / Description */}
+            <div className="mt-6">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                Tentang Buku Ini
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2 font-normal">
+                Buku <strong>"{book.title}"</strong> terdata di arsip digital Open Library Internet Archive dengan identifier karya <code>{book.key}</code>.
+                Tercatat pertama kali dipublikasikan pada tahun <strong>{book.firstPublishYear ?? 'klasik'}</strong> dan memiliki sekitar <strong>{book.editionCount ?? 1} edisi</strong> yang terdaftar dalam katalog literatur publik.
+              </p>
+            </div>
+
+            {/* Related Books */}
+            {otherBooks.length > 0 && (
+              <div className="mt-6 pt-5 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                    Buku Terkait Lainnya
+                  </h3>
+                  <span className="text-[11px] text-slate-400 font-semibold">
+                    {otherBooks.length} Buku
+                  </span>
+                </div>
+
+                <div className="flex space-x-3 overflow-x-auto scrollbar-none pb-2">
+                  {otherBooks.map((rel) => (
+                    <div
+                      key={`rel_${rel.key}`}
+                      onClick={() => onSelectRelatedBook(rel)}
+                      className="w-20 sm:w-24 shrink-0 cursor-pointer group"
+                    >
+                      <div className="aspect-[2/3] rounded-xl overflow-hidden bg-slate-100 shadow-xs border border-slate-200/80 group-hover:scale-104 transition duration-200">
+                        {rel.coverUrl ? (
+                          <img
+                            src={rel.coverUrl}
+                            alt={rel.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 text-[9px] font-bold p-1 text-center">
+                            {rel.title}
+                          </div>
+                        )}
+                      </div>
+                      <h4 className="text-[11px] font-bold text-slate-800 line-clamp-1 mt-1 group-hover:text-indigo-600">
+                        {rel.title}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 line-clamp-1">
+                        {rel.authorNames[0] ?? ''}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

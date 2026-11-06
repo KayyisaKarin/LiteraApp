@@ -17,7 +17,7 @@ export function mapDocToBook(doc: OpenLibraryDoc): Book {
 
 export async function searchOpenLibrary(
   query: string,
-  limit: number = 10,
+  limit: number = 20,
   start: number = 0,
   signal?: AbortSignal
 ): Promise<{ books: Book[]; numFound: number; start: number }> {
