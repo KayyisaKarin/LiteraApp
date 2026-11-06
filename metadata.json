@@ -1,0 +1,6 @@
+{
+  "name": "Digital Library Explorer",
+  "description": "Digital Library Explorer with Open Library API integration, Clean Architecture Flutter Riverpod code, and interactive live simulator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
